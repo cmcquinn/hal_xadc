@@ -35,12 +35,16 @@ MODULE_AUTHOR("Cameron McQuinn");
 MODULE_DESCRIPTION("Driver for Xilinx Zynq XADC");
 MODULE_LICENSE("GPL v2");
 
+/* config string */
+#define MAX_ADC_CHAN 16;
+char *channels[MAX_ADC_CHAN];
+RTAPI_MP_ARRAY_STRING(channels, MAX_ADC_CHAN, "Names of XADC channels to look for");
+
 /***********************************************************************
 *                STRUCTURES AND GLOBAL VARIABLES                       *
 ************************************************************************/
 
-static iio_device* xadc;
-
+static struct iio_device* xadc;
 
 /***********************************************************************
 *                  LOCAL FUNCTION DECLARATIONS                         *
@@ -59,6 +63,7 @@ int rtapi_app_main(void)
 {
   /* pointers used in the initialization */
   struct iio_context* context = iio_create_local_context();
+  xadc = iio_context_find_device(context, "xadc");
 
 }
 
