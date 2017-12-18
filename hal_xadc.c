@@ -26,9 +26,7 @@
 
 #include "hal.h"		/* HAL public API decls */
 
-/* Linux iio includes */
-#include <iio/iio.h>
-#include <iio.h>
+#include <iio.h> /* libiio API */
 
 /* module information */
 MODULE_AUTHOR("Cameron McQuinn");
