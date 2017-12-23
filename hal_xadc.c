@@ -37,7 +37,7 @@ MODULE_LICENSE("GPL v2");
 
 /* config string */
 #define MAX_ADC_CHAN 16;
-char *channels[MAX_ADC_CHAN];
+char *channels[MAX_ADC_CHAN] = { '\0' };
 RTAPI_MP_ARRAY_STRING(channels, MAX_ADC_CHAN, "Names of XADC channels to look for");
 
 /***********************************************************************
@@ -84,7 +84,7 @@ int rtapi_app_main(void)
   return -1;
   }
 
-  /* STEP 2: allocate shared memory for skeleton data */
+  /* STEP 2: allocate shared memory for channel data */
   xadc_channel_array = hal_malloc(num_channels * sizeof(channel_t));
   if (xadc_channel_array == 0) {
   rtapi_print_msg(RTAPI_MSG_ERR,
@@ -102,6 +102,8 @@ int rtapi_app_main(void)
       if (xadc_channel_array[n].analog_in == nullptr) {
           rtapi_print_msg(RTAPI_MSG_ERR,
             "XADC: ERROR: failed to find XADC channel %s\n", channels[i]);
+          hal_exit(comp_id);
+          return -1;
       }
   }
 
