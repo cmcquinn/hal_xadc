@@ -33,11 +33,9 @@ MODULE_AUTHOR("Cameron McQuinn");
 MODULE_DESCRIPTION("Driver for Xilinx Zynq XADC");
 MODULE_LICENSE("GPL v2");
 
-#define ARRAY_SIZE(x) (sizeof(x) ? sizeof(x) / sizeof((x)[0]) : 0)
-
 /* config string */
-#define MAX_ADC_CHAN 16;
-char *channels[MAX_ADC_CHAN] = { '\0' };
+#define MAX_ADC_CHAN 16
+char *channel_cfg[MAX_ADC_CHAN] = { '\0' };
 RTAPI_MP_ARRAY_STRING(channels, MAX_ADC_CHAN, "Names of XADC channels to look for");
 
 /***********************************************************************
@@ -57,7 +55,7 @@ static struct iio_device* xadc;
 
 /* HAL globals */
 static int comp_id;
-static int num_channels;
+static int num_channels = 0;
 
 /***********************************************************************
 *                  LOCAL FUNCTION DECLARATIONS                         *
@@ -74,13 +72,24 @@ static void read_xadc(void *arg, long period);
 
 int rtapi_app_main(void)
 {
-  num_channels = ARRAY_SIZE(channels);
+  /* Determine how many channels were passed in */
+  while (channel_cfg[num_channels] != '\0' && num_channels <= MAX_ADC_CHAN)
+  {
+    num_channels++;
+  }
+
+  if (num_channels == 0)
+  {
+    rtapi_print_msg(RTAPI_MSG_ERR,
+      "XADC: ERROR: Channel configuration param is empty\n");
+    return -1;
+  }
 
   /* STEP 1: initialise the driver */
   comp_id = hal_init("hal_xadc");
   if (comp_id < 0) {
   rtapi_print_msg(RTAPI_MSG_ERR,
-      "XADC: ERROR: hal_init() failed\n");
+    "XADC: ERROR: hal_init() failed\n");
   return -1;
   }
 
@@ -98,10 +107,10 @@ int rtapi_app_main(void)
   xadc = iio_context_find_device(context, "xadc");
   for (int i = 0; i < num_channels; i++)
   {
-      xadc_channel_array[n].analog_in = iio_device_find_channel(xadc, channels[i], false);
+      xadc_channel_array[n].analog_in = iio_device_find_channel(xadc, channel_cfg[i], false);
       if (xadc_channel_array[n].analog_in == nullptr) {
           rtapi_print_msg(RTAPI_MSG_ERR,
-            "XADC: ERROR: failed to find XADC channel %s\n", channels[i]);
+            "XADC: ERROR: failed to find XADC channel %s\n", channel_cfg[i]);
           hal_exit(comp_id);
           return -1;
       }
