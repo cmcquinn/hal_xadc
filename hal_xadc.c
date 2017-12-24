@@ -80,24 +80,21 @@ int rtapi_app_main(void)
 
   if (num_channels == 0)
   {
-    rtapi_print_msg(RTAPI_MSG_ERR,
-      "XADC: ERROR: Channel configuration param is empty\n");
+    rtapi_print_msg(RTAPI_MSG_ERR, "XADC: ERROR: Channel configuration param is empty\n");
     return -1;
   }
 
   /* STEP 1: initialise the driver */
   comp_id = hal_init("hal_xadc");
   if (comp_id < 0) {
-  rtapi_print_msg(RTAPI_MSG_ERR,
-    "XADC: ERROR: hal_init() failed\n");
+  rtapi_print_msg(RTAPI_MSG_ERR, "XADC: ERROR: hal_init() failed\n");
   return -1;
   }
 
   /* STEP 2: allocate shared memory for channel data */
   xadc_channel_array = hal_malloc(num_channels * sizeof(channel_t));
   if (xadc_channel_array == 0) {
-  rtapi_print_msg(RTAPI_MSG_ERR,
-      "XADC: ERROR: hal_malloc() failed\n");
+  rtapi_print_msg(RTAPI_MSG_ERR, "XADC: ERROR: hal_malloc() failed\n");
   hal_exit(comp_id);
   return -1;
   }
@@ -109,37 +106,33 @@ int rtapi_app_main(void)
   {
       xadc_channel_array[n].analog_in = iio_device_find_channel(xadc, channel_cfg[i], false);
       if (xadc_channel_array[n].analog_in == nullptr) {
-          rtapi_print_msg(RTAPI_MSG_ERR,
-            "XADC: ERROR: failed to find XADC channel %s\n", channel_cfg[i]);
+          rtapi_print_msg(RTAPI_MSG_ERR, "XADC: ERROR: failed to find XADC channel %s\n", channel_cfg[i]);
           hal_exit(comp_id);
+          iio_context_destroy(context);
           return -1;
       }
   }
 
   /* STEP 4: export the pin(s) */
-  retval = hal_pin_u32_newf(HAL_IN, &(xadc_channel_array->data_out),
-               comp_id, "skeleton.%d.pin-%02d-out", n, 1);
+  retval = hal_pin_u32_newf(HAL_OUT, &(xadc_channel_array->data_out), comp_id, "skeleton.%d.pin-%02d-out", n, 1);
   if (retval < 0) {
-  rtapi_print_msg(RTAPI_MSG_ERR,
-      "XADC: ERROR: port %d var export failed with err=%i\n", n,
-      retval);
+  rtapi_print_msg(RTAPI_MSG_ERR, "XADC: ERROR: port %d var export failed with err=%i\n", n, retval);
+  iio_context_destroy(context);
   hal_exit(comp_id);
   return -1;
   }
 
   /* STEP 5: export read function */
   rtapi_snprintf(name, sizeof(name), "skeleton.%d.write", n);
-  retval = hal_export_funct(name, write_port, &(xadc_channel_array[n]), 0, 0,
-  comp_id);
+  retval = hal_export_funct(name, write_port, &(xadc_channel_array[n]), 0, 0, comp_id);
   if (retval < 0) {
-  rtapi_print_msg(RTAPI_MSG_ERR,
-      "XADC: ERROR: port %d read funct export failed\n", n);
+  rtapi_print_msg(RTAPI_MSG_ERR, "XADC: ERROR: port %d read funct export failed\n", n);
+  iio_context_destroy(context);
   hal_exit(comp_id);
   return -1;
   }
 
-  rtapi_print_msg(RTAPI_MSG_INFO,
-  "XADC: installed driver for %d ports\n", num_channels);
+  rtapi_print_msg(RTAPI_MSG_INFO, "XADC: installed driver for %d ports\n", num_channels);
   hal_ready(comp_id);
   return 0;
 }
