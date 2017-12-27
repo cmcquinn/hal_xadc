@@ -1,6 +1,6 @@
 /*    Copyright (C) 2017 Cameron McQuinn
  *
- *    Based on hal_.c,
+ *    Based on hal_skeleton.c,
  *    by John Kasunich, Copyright (C) 2003
  *
  *
@@ -43,7 +43,7 @@ RTAPI_MP_ARRAY_STRING(channels, MAX_ADC_CHAN, "Names of XADC channels to look fo
 ************************************************************************/
 
 typedef struct {
-  iio_channel* analog_in;
+  iio_channel* channel_ptr;
   uint32_t value;
   char *name;
 } channel_t;
@@ -52,8 +52,9 @@ typedef struct {
 static channel_t *xadc_channel_array;
 
 /* libiio object globals */
-static struct iio_context* context;
-static struct iio_device* xadc;
+static struct iio_context *context;
+static struct iio_device *xadc;
+static struct iio_buffer *buf;
 
 /* HAL globals */
 static int comp_id;
@@ -106,21 +107,27 @@ int rtapi_app_main(void)
   xadc = iio_context_find_device(context, "xadc");
   for (int i = 0; i < num_channels; i++)
   {
-      xadc_channel_array[n].analog_in = iio_device_find_channel(xadc, channel_cfg[i], false);
+      xadc_channel_array[n].channel_ptr = iio_device_find_channel(xadc, channel_cfg[i], false);
       /* does doing the assignment this way actually set the name to the string, or just a pointer to channel_cfg[i] */
       xadc_channel_array[n].name = channel_cfg[i];
-      if (xadc_channel_array[n].analog_in == nullptr) {
+      if (xadc_channel_array[n].channel_ptr == nullptr) {
           rtapi_print_msg(RTAPI_MSG_ERR, "XADC: ERROR: failed to find XADC channel %s\n", channel_cfg[i]);
           hal_exit(comp_id);
           iio_context_destroy(context);
           return -1;
+      }
+
+      /* setup the channel for sampling, if necessary */
+      if(iio_channel_is_scan_element(xadc_channel_array[n].channel_ptr))
+      {
+        iio_channel_enable(xadc_channel_array[n].channel_ptr);
       }
   }
 
   /* STEP 4: export the pin(s) */
   for (int i = 0; i < num_channels; i++)
   {
-      retval = hal_pin_u32_newf(HAL_OUT, &(xadc_channel_array[i]->value), comp_id, "xadc.0.ch.%s.out", xadc_channel_array[i]->name);
+      retval = hal_pin_u32_newf(HAL_OUT, &(xadc_channel_array[i].value), comp_id, "xadc.0.ch.%s.out", xadc_channel_array[i].name);
       if (retval < 0) {
         rtapi_print_msg(RTAPI_MSG_ERR, "XADC: ERROR: channel %s export failed with err=%i\n", xadc_channel_array[i]->name, retval);
         iio_context_destroy(context);
@@ -144,9 +151,22 @@ int rtapi_app_main(void)
   return 0;
 }
 
-}
-
 void rtapi_app_exit(void)
 {
 
+}
+
+/**************************************************************
+* REALTIME CHANNEL READ FUNCTION                                *
+**************************************************************/
+
+static void read_adc(void *arg, long period)
+{
+    channel_t *channel;
+    unsigned char outdata;
+    channel = arg;
+
+    outdata = *(port->data_out) & 0xFF;
+    /* write it to the hardware */
+    rtapi_outb(outdata, 0x378);
 }
