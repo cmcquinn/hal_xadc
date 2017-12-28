@@ -16,17 +16,17 @@ typedef struct {
   char *name;
 } channel_t;
 
+/* pointer to array of channel_t structs in shared memory, 1 per ADC channel found */
+static channel_t *xadc_channel_array;
+
+/* libiio object globals */
+static struct iio_context *context;
+static struct iio_device *xadc;
+static struct iio_buffer *buf;
+
+
 int main(void)
 {
-  int num_channels = 3;
-
-  channel_t channel_array[num_channels];
-
-  /* libiio objects */
-  struct iio_context *context;
-  struct iio_device *xadc;
-  struct iio_buffer *buf;
-
   context = iio_create_local_context();
   xadc = iio_context_find_device(context, "xadc");
 
