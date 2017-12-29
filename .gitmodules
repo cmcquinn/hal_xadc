@@ -1,3 +1,0 @@
-[submodule "iio"]
-	path = iio
-	url = https://github.com/analogdevicesinc/libiio.git
